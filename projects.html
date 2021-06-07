@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<head>
+	<title>Gabriel Eiseman</title>
+	<link rel="stylesheet" type="text/css" href="main.css" media="screen"/>
+	<link rel="icon" type="image/x-icon" href="hacatu.png"/>
+	<script type="text/javascript" src="main.js"></script>
+</head>
+<body>
+	<div id="float_hdr">
+		<table>
+			<tbody>
+				<tr>
+					<td class="cur_subpage_link">Gabriel</td>
+					<td><a class="subpage_link" href="index.html">About</a></td>
+					<td><a class="subpage_link" href="contact.html">Contact</a></td>
+					<td class="cur_subpage_link">Projects</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	<div id="hidden_hdr"></div>
+	<div class="subpage" id="projects_page">
+		<div class="tsect">
+			<h1>Current:</h1>
+			<h1>Crater Container Library / Number Theory Utils</h1>
+			<div class="tsect_body">
+				I do most of my programming in C, which means I often need to re-invent the wheel so to speak.
+				The <a href="https://github.com/hacatu/Crater">Crater container library</a> is my data structure library, including AVL trees, hash tables with incremental resizing,
+				vectors, a slab allocator for node-based data structures, pseudorandom number generators, and so on.
+				<p>
+				The <a href="https://github.com/hacatu/Number-Theory-Utils">number theory utilities</a> library includes modular arithmetic, factorization/primality testing/sieving,
+				and polynomials over finite fields (including root finding).  For factoring polynomials, Cantor–Zassenhaus with linear and quadratic specializations is implemented.
+				For integers, trial division, Pollard Rho (with Floyd or Brent cycle finding), and Lenstra
+				elliptic curve factorization (with Weierstrass or Montgomery curves/exponentiation) are implemented.
+				I started this library to help with Project Euler problems, see below.
+				</p>
+			</div>
+			<h1>Origami Tesselation Planner (GTess)</h1>
+			<div class="tsect_body">
+				My most folded origami model is probably Flower Tower by Chris Palmer.  I learned this model at the 2014 origami USA convention, where I also met Jeremy Schafer (
+				<a href="https://youtu.be/0FVH157LdME">here is a video of him explaining how to fold a flower tower</a>).
+				It's a very slick and elegant construction, and it's both a lot of fun to fold and quite nice
+				looking when completed.  However, I have also made a lot of tesselations in my time and it is not lost on me at all that Flower Tower is, at its core, a modified dodecagon
+				twist and as such should be able to be extended into a tesselated version with many "flowers" from a single sheet of paper.
+				<p>
+				This probably looks like a difficult design
+				problem, but it is even harder than it appears.  Twists in origami tesselations are radially symmetric pleat intersections where all the pleats lie in the same direction
+				clockwise or counterclockwise around a central point, but this means that if a pleat joins two twists then the twists must rotate in opposite directions.  While a twist
+				may have 3 or more sides, only twists with 7 or more can be modified into Flower Towers (12 is standard however).  Thus, the twists must correspond to
+				<a href="https://en.wikipedia.org/wiki/Euclidean_tilings_by_convex_regular_polygons">a planar tiling by regular polygons</a> with an even number at each vertex and some
+				polygons having 7 or more sides.  A good candidate would be a 4.6.12 tiling (a square, hexagon, and dodecagon
+				meeting at each vertex) with the hexagon split into 6 triangles.  Another possibility besides directly incorporating dodecagonal twists into a tesselation is to split every other
+				pleat to get 6 sets of stacked pleats instead of 12 single pleats.  This would allow a simpler tiling, such as the 3.6 tiling, to be used.  Finally, the pleats could each be split
+				so as to be directionless and remove the restriction of needing twists connected by a pleat to have opposite directions.  This would allow a tiling such as 3.12.12 to work.
+				</p>
+				<p>
+				Trying to design this tesselation has made me acutely aware that there is no suitable origami tesselation planner (at least, not one known to me).  While some tools, even some
+				I'm familiar with such as AutoCAD, could be coaxed into working, I would like to have a more origami focused solution.
+				</p>
+				<table><tbody><tr>
+				<td><img src="flower_tower_crease_pattern.png" class="fourth_height"></td>
+				<td>
+					Left: the crease pattern and twist boundary of a single 12-sided flower tower with 1 layer.  Magenta indicates mountain folds, cyan indicates valley folds,
+					and white indicates the twist boundary, the extent of the area occupied by the folded up result projected down onto the unfolded crease pattern.  This crease pattern is using the
+					third approach mentioned above for tesselation.
+					<p>
+					Right: a single folded flower tower with 4 layers.
+					</p>
+				</td>
+				<td><img src="flower_tower_photo.jpg" class="fourth_height"></td>
+				</tr></tbody></table>
+			</div>
+			<h1>Project Euler</h1>
+			<div class="tsect_body">
+				<table><tbody><tr>
+				<td>
+				I have been programming since the beginning of high school and doing math for even longer, so <a href="https://projecteuler.net/">Project Euler</a> was one of the first things that got me into programming
+				and I still solve problems to this day.  This is a great resource with a lot of very interesting problems, and anyone who enjoys math or computer science can surely
+				find something to enjoy and even learn from here.
+				</td>
+				<td class="align_top"><img class="left_padded" src="https://projecteuler.net/profile/hacatu.png"></td>
+				</tr></tbody></table>
+			</div>
+			<h1>Past:</h1>
+			<h1>Rewriting Recursive Functions</h1>
+			<div class="tsect_body">
+				Pure multiply recursive functions like the Fibonacci function have exponential time and space complexity when implemented naively.
+				Even when applying sibling call elimination, the only major rewriting most current compilers will do for these functions,
+				the implementation still has exponential time and space complexity.
+				<p>
+				However, for pure functions we can view the recursive calls made as a lattice which allows us to generalize the technique of memoization we would use for
+				functions like Fibonacci that have a one dimensional index.  A surprisingly large number of problems can be interpreted as pure, bounded recursive functions.
+				Modular arithmetic means we can cook up fairly complicated functions (ie where the recursive dependency depends on some polynomial of some inputs mod some integer)
+				which can be rewritten in this way.  In general, this rewriting can be thought of as chopping the lattice of recursive calls up into layers, and evaluating layer by
+				layer to avoid recomputation and minimize memory consumption.
+				</p>
+				<p>
+				For single parameter functions (or sometimes functions with a few parameters, all but one of which can take on only a handful of values), we can do even better by applying
+				linear algebra techniques.  There is the fairly well known method of converting the problem to a matrix exponentiation and computing it by repeated squaring, but we
+				can do even better by interpreting the matrix as a polynomial in the ring of polynomials mod its minimal polynomial.
+				</p>
+				<p>
+				This was my first research project at Georgia Tech with Professor Qirun Zhang.  I presented it at the Student Research
+				Competition at POPL 2020.
+				</p>
+			</div>
+			<h1>Origami Simulator</h1>
+			<div class="tsect_body">
+				<table><tbody><tr><td>
+					<img src="waterbomb_simulation.png" class="fourth_sized">
+				</td><td>
+				Origami is a surprisingly technical art that embeds a lot of interesting mathematical and computational problems.
+				For instance, not only is folding a model from a crease pattern fairly difficult even for advanced origamists,
+				the problem of flat foldability or whether or not a crease pattern can be folded flat is NP complete, even if the creases are marked as mountains and valleys.
+
+				<p>
+				Here, I created a physics based simulation for origami models that takes a crease pattern with assigned edge angles and simulates folding it up by treating
+				the edges as springs.
+				With no other influence the energy would be split into net kinetic energy and a complicated oscillator.
+				Thus every few frames of the simulation I remove net kinetic energy, and I include simulated friction to ensure energy decreases.
+				</p>
+				<p>
+				Check out this rough <a href="origami_simulator_demo.html">demo</a>! (Click to start/stop) <br>
+				Here is a <a href="convex_final_paper.pdf">report</a> on how it works.  This was my final project for my convex optimization class, although it also draws on my physics
+				knowledge and love for origami.
+				</p>
+				</td></tr></tbody></table>
+			</div>
+			<h1>Apollonian Circle Constructability</h1>
+			<div class="tsect_body">
+				Given three mutually tangent circles, there are always exactly two circles simultaniously tangent to all three.
+				When the circles are all externally tangent this means one in the middle and one surrounding all three.
+				We can repeat this to create a packing of disjoint circles that cover the plane.
+				<p>
+				Since this problem was introduced by the ancient Greeks, it has been known that the fourth tangent circle is constructable via compass and straightedge.
+				However, the minimum number of steps needed was not known.
+				<a href="http://sites.math.rutgers.edu/~ak1230/">Professor Alex Kontorovich</a>, my mentor for this project, found a 7 step construction.
+				</p>
+				<p>
+				I used a computer search to show that there are no six step constructions, assuming that using arbitrary points does not help in this case.
+				There are somewhere in the ballpark of 18 quintillion possible six step constructions from all the features in the initial three circle configuration,
+				but we know in order to draw the fourth circle at step six we will need its center and a point on its circumference after step five,
+				so we need a feature through the center after step four, which lets us filter out the vast vast majority of possible constructions after four steps when there
+				are only about 300 million.   My computer search also found and verified a 3 step construction for the equilateral case, 5 for the isosceles case, and 6 for the
+				right triangle case (considering the triangle formed by the centers of the initial circles), the last of which was new.
+				</p>
+				<p>
+				Here is a <a href="dimacs_final_presentation.pdf">presentation</a>. <br>
+				Here is some <a href="https://github.com/hacatu/apollonian_constructability">code</a>.
+				</p>
+				<table><tbody><tr>
+					<td><img src="construction_right_1.png" class="fourth_sized"></td>
+					<td><img src="construction_right_2.png" class="fourth_sized"></td>
+					<td><img src="construction_right_3.png" class="fourth_sized"></td>
+					<td><img src="construction_right_4.png" class="fourth_sized"></td>
+				</tr></tbody></table>
+			</div>
+			<h1>Parser Library with calculator and Lisp interpreter</h1>
+			<div class="tsect_body">
+				My <a href="https://github.com/hacatu/Praser2">parser library</a> accepts language descriptions (in a Backus-Naur like form) and can either compile these descriptions
+				to C source code (with other languages possible by changing the provided code snippets), or can interpret these descriptions
+				without compiling them and parse text to an AST directly.
+				<p>
+				The generate C code is then compiled into a shared library so that a driver program can dynamically select what parser to use
+				at runtime to turn the input text into an AST, and also what callback to send the AST to from a second shared library.
+				The project has a calculator and a lisp interpreter implemented in this way.
+				</p>
+			</div>
+			<h1>SDL2 Demos</h1>
+			<div class="tsect_body">
+				My Apollonian Circle Constructability project included an SDL2 based viewer for constructions.  I've also made snake, tic tac toe, the 2d ising model, a simple 3d
+				renderer, an origami crease pattern viewer, and a few other demos.  The origami simulator above uses THREE.js.
+			</div>
+			<h1>Simple risc cpu emulator</h1>
+			<div class="tsect_body">
+				This was a project for my computer architecture class.  I had a sufficiently working emulator to run the test programs in 7 (the professor offered extra credit to
+				whomever finished first), and later I added an assembler, disassembler, simple debugger, and an emulator written in the target machine
+				language so that the emulators could be nested (I used self-modifying code to work around the lack of non-fixed jumps and indirect calls).
+			</div>
+			<h1>Lock free multiple in/out queue</h1>
+			<div class="tsect_body">
+				Lock contention can significantly slow down multithreaded applications, especially when using preemptable lock functions that can let the operating system stop a thread.
+				Sometimes this is desireable if the thread would probably be waiting on the lock for a long time, but often times it would not.
+				<p>
+				Enter lock free data structures.  Through careful use of atomic compare and swap instructions and memory fences, any true locking can be avoided while still
+				providing thread safe data structures.  Queues (circular buffers) are especially good candidates for making lock free because they are simpler than self balancing
+				trees and also ubiquitously used to send jobs or other data from "producer" threads to "consumer" threads.
+				</p>
+			</div>
+		</div>
+	</div>
+</body>
+
