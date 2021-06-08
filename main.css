@@ -51,12 +51,12 @@
 	text-align: center;
 }
 
-.subpage_link a {
+.subpage_link > a {
 	color: white;
 	text-decoration: none;
 }
 
-.subpage_link a:hover {
+.subpage_link > a:hover {
 	color: #CCC;
 	-webkit-touch-callout: none;
 	-webkit-user-select: none;
