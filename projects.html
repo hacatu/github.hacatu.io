@@ -8,11 +8,17 @@
 <body>
 	<div id="float_hdr">
 		<table>
+			<colgroup>
+				<col span="1" style="width: 25%;">
+				<col span="1" style="width: 25%;">
+				<col span="1" style="width: 25%;">
+				<col span="1" style="width: 25%;">
+			</colgroup>
 			<tbody>
 				<tr>
 					<td class="cur_subpage_link">Gabriel</td>
-					<td><a class="subpage_link" href="index.html">About</a></td>
-					<td><a class="subpage_link" href="contact.html">Contact</a></td>
+					<td class="subpage_link"><a href="index.html">About</a></td>
+					<td class="subpage_link"><a href="contact.html">Contact</a></td>
 					<td class="cur_subpage_link">Projects</td>
 				</tr>
 			</tbody>
@@ -57,9 +63,9 @@
 				Trying to design this tesselation has made me acutely aware that there is no suitable origami tesselation planner (at least, not one known to me).  While some tools, even some
 				I'm familiar with such as AutoCAD, could be coaxed into working, I would like to have a more origami focused solution.
 				</p>
-				<table><tbody><tr>
+				<table class="justified"><tbody><tr class="justified">
 				<td><img src="flower_tower_crease_pattern.png" class="fourth_height"></td>
-				<td>
+				<td class="landscape_only">
 					Left: the crease pattern and twist boundary of a single 12-sided flower tower with 1 layer.  Magenta indicates mountain folds, cyan indicates valley folds,
 					and white indicates the twist boundary, the extent of the area occupied by the folded up result projected down onto the unfolded crease pattern.  This crease pattern is using the
 					third approach mentioned above for tesselation.
@@ -67,19 +73,23 @@
 					Right: a single folded flower tower with 4 layers.
 					</p>
 				</td>
-				<td><img src="flower_tower_photo.jpg" class="fourth_height"></td>
+				<td><img src="flower_tower_photo.jpg" class="fourth_height inline_img_right"></td>
 				</tr></tbody></table>
+				<sect class="portrait_only">
+					Left: the crease pattern and twist boundary of a single 12-sided flower tower with 1 layer.  Magenta indicates mountain folds, cyan indicates valley folds,
+					and white indicates the twist boundary, the extent of the area occupied by the folded up result projected down onto the unfolded crease pattern.  This crease pattern is using the
+					third approach mentioned above for tesselation.
+					<p>
+					Right: a single folded flower tower with 4 layers.
+					</p>
+				</sect>
 			</div>
 			<h1>Project Euler</h1>
 			<div class="tsect_body">
-				<table><tbody><tr>
-				<td>
+				<img class="inline_img_right" id="euler_badge" src="https://projecteuler.net/profile/hacatu.png" width="200" height="60">
 				I have been programming since the beginning of high school and doing math for even longer, so <a href="https://projecteuler.net/">Project Euler</a> was one of the first things that got me into programming
 				and I still solve problems to this day.  This is a great resource with a lot of very interesting problems, and anyone who enjoys math or computer science can surely
 				find something to enjoy and even learn from here.
-				</td>
-				<td class="align_top"><img class="left_padded" src="https://projecteuler.net/profile/hacatu.png"></td>
-				</tr></tbody></table>
 			</div>
 			<h1>Past:</h1>
 			<h1>Rewriting Recursive Functions</h1>
@@ -106,9 +116,7 @@
 			</div>
 			<h1>Origami Simulator</h1>
 			<div class="tsect_body">
-				<table><tbody><tr><td>
-					<img src="waterbomb_simulation.png" class="fourth_sized">
-				</td><td>
+				<img src="waterbomb_simulation.png" class="fourth_sized inline_img">
 				Origami is a surprisingly technical art that embeds a lot of interesting mathematical and computational problems.
 				For instance, not only is folding a model from a crease pattern fairly difficult even for advanced origamists,
 				the problem of flat foldability or whether or not a crease pattern can be folded flat is NP complete, even if the creases are marked as mountains and valleys.
@@ -124,7 +132,6 @@
 				Here is a <a href="convex_final_paper.pdf">report</a> on how it works.  This was my final project for my convex optimization class, although it also draws on my physics
 				knowledge and love for origami.
 				</p>
-				</td></tr></tbody></table>
 			</div>
 			<h1>Apollonian Circle Constructability</h1>
 			<div class="tsect_body">
@@ -148,7 +155,7 @@
 				Here is a <a href="dimacs_final_presentation.pdf">presentation</a>. <br>
 				Here is some <a href="https://github.com/hacatu/apollonian_constructability">code</a>.
 				</p>
-				<table><tbody><tr>
+				<table class="justified"><tbody><tr class="justified">
 					<td><img src="construction_right_1.png" class="fourth_sized"></td>
 					<td><img src="construction_right_2.png" class="fourth_sized"></td>
 					<td><img src="construction_right_3.png" class="fourth_sized"></td>
