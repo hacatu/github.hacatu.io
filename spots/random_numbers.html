@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Gabriel Eiseman - Random Numbers</title>
+	<link rel="stylesheet" type="text/css" href="../main.css" media="screen"/>
+	<link rel="stylesheet" type="text/css" href="../pygments_xcode.css" media="screen"/>
+	<link rel="icon" type="image/x-icon" href="../hacatu.png"/>
+	<script type="text/javascript">
+		MathJax = {
+		  tex: {inlineMath: [['$', '$'], ['\\(', '\\)']]}
+		};
+	</script>
+	<script type="text/javascript" id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.0/es5/tex-svg-full.min.js" integrity="sha512-RvtSA5grZZKDz4mg1vcso9AZdczZg631CC1pbqp+GJC/3mqAcSSy1RJXnini9TOqXQQc7K0zaYWd4XdQLG92/Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+	<div id="float_hdr">
+		<table>
+			<colgroup>
+				<col span="1" style="width: 25%;">
+				<col span="1" style="width: 25%;">
+				<col span="1" style="width: 25%;">
+				<col span="1" style="width: 25%;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="cur_subpage_link">Gabriel</td>
+					<td class="subpage_link"><a href="../index.html">About</a></td>
+					<td class="subpage_link"><a href="../contact.html">Contact</a></td>
+					<td class="subpage_link"><a href="../projects.html">Projects</a></td>
+				</tr>
+				<tr>
+					<td colspan=3></td>
+					<td class="subpage_link"><a href="../problem_spotlights.html">Problem Spotlights</a></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	<div id="hidden_hdr"></div>
+	<div class="subpage" id="main_page">
+		<div class="tsect">
+			<h1>Problem Spotlight: Random Numbers</h1>
+			<h2>Introduction</h2>
+			<div class="tsect_body">
+				Randomness is extremely interesting and useful.  Without randomness, most games would be rather boring
+				and playlists would not shuffle.
+				<p>
+				But surprisingly, random numbers aren't just useful for entertainment.  Randomized algorithms can be
+				much more powerful than fully deterministic ones.  This is commonly seen in search and optimization
+				algorithms.  Greedy algorithms and gradient descent are powerful tools, but randomness lets us improve
+				them by reducing tendency to get stuck in locally optimal points or searching spaces where it is hard
+				to define gradients.
+				</p>
+				<p>
+				Even many problems that seem highly deterministic can be solved better using randomness.  Number theory
+				has a lot of examples of this: fast factorization algorithms like Pollard's Rho algorithm, Lenstra's
+				Elliptic Curve algorithm, and special/general number field sieves; square root algorithms like Cipolla
+				and Shanks; some prime testing algorithms like Miller Rabin; and so on.
+				</p>
+				<p>
+				The theoretical power of randomized and fully deterministic algorithms is a more fine grained version of
+				the famous $P$ vs $NP$ problem (though the practical power of randomized algorithms is undisputably higher,
+				with the notable caveat that pseudorandomness is usually sufficient).  $P$, $ZPP$, $RP$, $BPP$, $BQP$,
+				and $NP$ are all complexity classes, representing problems which can be solved in polynomial time
+				by different kinds of computers.
+				</p>
+				<ul>
+					<li>
+						$P$ is the set of yes/no problems that can be solved in polynomial time on a fully deterministic computer.
+						The AKS prime testing algorithm is polynomial time on such a computer, proving prime testing is in $P$.
+					</li>
+					<li>
+						$ZPP$ - a computer with access to random numbers.
+					</li>
+					<li>
+						$RP$ - a computer with random numbers that may have false negatives less than half the time (but never false positives).
+						The Miller Rabin prime testing algorithm is polynomial time in such a setting, proving prime testing is in $RP$
+						(but we know the stronger result that it is in $P$).
+					</li>
+					<li>
+						$BPP$ - a computer with random numbers that may have false positives and false negatives with less than a third of the time.
+					</li>
+					<li>
+						$BQP$ - a quantum computer.  Shor's algorithm is polynomial time in this setting, so factorization is
+						definitely in $BQP$, though it may be in one of the above classes too.
+					</li>
+					<li>
+						$NP$ - a nondeterministic computer.  Nondeterminism computers can't actually exist and are only a theoretical
+						tool.  
+					</li>
+				</ul>
+				$P\subseteq ZPP\subseteq RP\subseteq BPP\subseteq BQP, NP$.  Whether or not any of these set containments is actually strict
+				is unknown, and in fact it isn't even known if $BQP\subseteq NP$, $NP\subseteq BQP$, or neither.
+				It would be an astounding breakthrough to find even one problem in $BPP$ but not $P$, since this would prove $P\neq NP$.
+				<p>
+				However, in practice there are a lot of problems that we know how to solve quickly with randomness but not without it,
+				so unless it turns out $P=NP$ in a way we can actually take advantage of, randomized algorithms will remain useful.
+				</p>
+			</div>
+			<h2>Looks Random to me</h2>
+			<div class="tsect_body">
+				Unfortunately, one of the most appealing features of computers is the fact that they <em>are</em> fully deterministic and
+				very much not random.  First we had to trick the sand into thinking, now we have to trick it into making random numbers!
+				<p>
+				While there are several ways to obtain truly random numbers on computers, they all have some drawbacks and tend to be slow,
+				so pseudorandom numbers are used instead whenever possible.  Reasonably non-vintage x86 processors have hardware random
+				number generators based on electrical noise, external <abbr title="hardware random number generator">hwrng</abbr>s exist,
+				Linux and other operator systems implement true random number generators using "entropy pools" constructed from user input,
+				network activity, and other unpredicatable sources, and online services using their own hwrngs exist.  All of these require
+				trust, and vulnerabilities have been found in Linux's rng in the past.
+				</p>
+				<p>
+				But what does it really mean for numbers to be random?  How can we create <abbr title="pseudorandom number generator">prng</abbr>s
+				that operate deterministically but emulate true randomness?  The answer is that nobody really knows.  In mathematics,
+				probability and statistics are built on the foundation of equally likely outcomes and probability spaces.  Different elements
+				of some set are assigned different probabilities, and how we actually generate these elements is not really the concern of
+				probability and statistics.  However, we can use the math to come up with tests of how random things are.
+				</p>
+				<p>
+				For instance, if we generate a huge number $n$ of random bytes, we expect each possible value of a byte to occur
+				$\frac{n}{256}$ times.  We can then use some prng we wish to test to make many such bytes, and use a goodness of fit test like
+				Chi-Squared to tell us what the probability of getting the bytes we saw from a true randoum source would be.
+				We can also check the correlation between bytes at different offsets to ensure they are very low.  Checking for uniformity
+				and non-correlation in many transformations of the output of a prng is pretty effective, and a lot of prng tests boil down
+				to this.
+				</p>
+			</div>
+			<h2>Order, through a Kaleidescope</h2>
+			<div class="tsect_body">
+				There are two major classes of prngs: those based on linear recurrence relations, and those based on cryptographic functions.
+				Any good cryptographic hash function can be turned into a good prng by simply hashing an ascending sequence of numbers.
+				Prngs based on cryptographic functions tend to be slow, but very resistant to attacks.  All prngs have an internal state,
+				and a prng with $n$ bits of internal state has $2^n$ possible unique internal states and therefore will repeat after generating
+				at most $2^n$ outputs.  For prngs based on linear recurrence relations, it is usually possible to quickly reverse engineer
+				the internal state once we have obtained $n$ bits of information from the generator.  For cryptographic prngs, this should not
+				be possible.
+				<p>
+				This ability to recover the "seed" (internal state) from a recurrence based prng is quite interesting.  Let's explore this
+				kind of prng more so we can understand this.
+				</p>
+				<p>
+				In a very general sense, we can think of recurrence based prngs as taking some smooth and easy to understand curve like a
+				straight line or an elliptic curve, and projecting it down from the real numbers to some finite field where its structure
+				becomes completely undetectable.
+				</p>
+				<table>
+					<tr>
+						<td>
+							<figure>
+								<img src="../elliptic_curve_re.png" class="fourth_height"/>
+								<figcaption>$y^2+y=x^3-x$ over $\mathbb{R}$</figcaption>
+							</figure>
+						</td>
+						<td>
+							<figure>
+								<img src="../elliptic_curve_ff.png" class="fourth_height" title="https://doc.sagemath.org/html/en/thematic_tutorials/explicit_methods_in_number_theory/elliptic_curves.html"/>
+								<figcaption>$y^2+y=x^3-x$ over $\mathbb{Z}_{499}$</figcaption>
+							</figure>
+						</td>
+					</tr>
+				</table>
+				See the pattern?  Neither do most statistical tests we care about!
+			</div>
+			<h2>Analysis of <a href="https://en.wikipedia.org/wiki/List_of_random_number_generators#Pseudorandom_number_generators_(PRNGs)">List of random number generators</a></h2>
+			<div class="tsect_body">
+				Most recurrence prngs have an internal state called something like $X_n$, an equation that finds $X_{n+1}$ in terms of $X_n$,
+				and usually output only part of $X_n$ each time.  For example, such a prng may have $256$ bits of internal state but only
+				output $32$ bit numbers at a time.
+				<ul>
+					<li>
+						Linear Congruential Generators (LCG) - Defined by the recurrence $X_{n+1}=(aX_n+c)\mod m$.  This type of generator
+						is very widely used, and when $c$ is coprime to $m$ and $a$ is a generator mod $m$, the period will be high
+						($\frac{m}{4}$ to $m$ depending on various things).  <code>glibc</code>, Visual C++, <code>musl</code>,
+						Java, and POSIX all use this type of prng.  Reversing such a generator with known $a$, $c$, and $m$ is
+						almost trivial.  We can rewrite the recurrence as
+						$$\begin{pmatrix} X_{n+1} \\ 1 \end{pmatrix} = \begin{pmatrix} a & c \\ 0 & 1 \end{pmatrix} \begin{pmatrix} X_n \\ 1 \end{pmatrix} \mod m$$
+						and then as
+						$$\begin{pmatrix} X_{n+k} \\ 1 \end{pmatrix} = \begin{pmatrix} a & c \\ 0 & 1 \end{pmatrix}^k \begin{pmatrix} X_n \\ 1 \end{pmatrix} \mod m.$$
+						This means once we find the internal state of the generator at any $n$, we can find its state
+						(and in turn the number it will generate) at any future $n+k$.  Depending on how a program uses such a prng,
+						it may take many observations to find the internal state $X_n$ at some point.  We would essentially build up a lot
+						of equations involving the matrix until we could uniquely determine it.  Like if the program only
+						takes 5 bits out of this prng at a time and stores them in $b_n$, we would need to store
+						$b_n = X_n \mod 2^5$ through $b_{n+13} = X_{n+13}$ to be able to uniquely determine all 64 bits of $X_n$.
+						And in practice it's likely that some outputs of the prng would be thrown out, which could complicate this
+						process.
+					</li>
+					<li>
+						Linear Feedback Shift Registers (LFSR), Mersenne Twister (MT), Xorshift/Xoroshiro, and SplitMix - These have
+						more complicated recurrence relations than LCGs, and often larger internal states.  For example, the common
+						version of MT uses 2.5 KB of state and a recurrence relation that is represented in terms of many bitshifts
+						and xor operations.  However, the key point is that xor, bitshift, and the other operations used in
+						these families of prngs are all linear operations, so the exact same matrix-based analysis we used
+						on LCGs will work for these generators as well, though the matrices in question become pretty large in
+						some cases like MT.
+					</li>
+					<li>
+						Lagged Fibonacci Generators (LFG) - These are the final class of non-cryptographic prngs is wide use,
+						and the most interesting from a mathematical perspective because these are the only class that has a
+						commonly used nonlinear variant.  The recurrence for and LFG is simply $S_n=S_{n-j}\star S_{n-k}\mod m$
+						where $\star$ is any binary operation.  Typically, addition, subtraction, multiplication, or xor is used.
+						We have to keep track of the previous $k$ values of $S_n$, meaning the internal state size is $kb$ where
+						$b$ is the size of $S_n$ in terms of bits.  In the case of addition, subtraction, and xor, this is
+						ultimately a linear operation in terms of the internal state, because we can write
+						$$\begin{pmatrix} S_n \\ S_{n-1} \\ \vdots \\ S_{n-k+1}\end{pmatrix} = \begin{pmatrix}\cdots S_{n-j}\star S_{n-k}\cdots \\ \hline\begin{array}{c|c} I_{k-1} & \vec{0}\end{array}\end{pmatrix} \begin{pmatrix}S_{n-1} \\ S_{n-2} \\ \vdots \\ S_{n-k}\end{pmatrix} \mod m$$
+						where the first row in the matrix represents the linear equation for $S_n$ in terms of $S_{n-j}$ and $S_{n-k}$,
+						and the rest of the matrix simply brings over $S_{n-1}$ through $S_{n-k+1}$ (hence the identity).
+						The reason this fails to work for multiplicative LFGs is simply because multiplication is not
+						linear.  We'll see what we can do about that in the next section.
+					</li>
+				</ul>
+				The point of this overview of recurrence based prngs is to show that 1) their recurrence relations, and
+				hence outputs, are linear functions, and 2) even though these functions may be unwieldy to write down
+				or work with by hand, they are trivial for computers to work with.  Therefore, for this category of prngs,
+				we can reverse engineer the seed after observing enough outputs.
+			</div>
+			<h2>But what if there was a way to make Multiplication Linear 🤔</h2>
+			<div class="tsect_body">
+				The above analyses of recurrence based prngs is fairly standard, but on the other hand I haven't
+				seen any such analysis for multiplicative LFGs (LFMs).  Papers about them tend to focus on analyzing
+				their period and other statistical properties, not reversing them, but they are less studied than
+				LCGs, other LFGs, and MT.
+				For LFMs, the recurrence is simply $S_n=S_{n-j}\cdot S_{n-k}\mod m$.  If it weren't
+				for the pesky $\mod m$, we would be able to simply take logarithms on both sides to get
+				$\ln S_n=\ln S_{n-j}+\ln S_{n-k}$.  However, not only <em>do</em> we have the pesky $\mod m$,
+				even if we didn't, we would run into precision issues trying to work with logarithms pretty
+				quickly since tiny errors would compound exponentially over time.
+				<p>
+				Since we are working mod $m$ though, we are working in a finite order group so we can use the
+				<em>discrete logarithm</em>!  The group of integers mod $m$ under multiplication is a particularly
+				well understood group, and most discrete logarithm algorithms are either general purpose (eg
+				Baby-step Giant-step and Pohlig-Hellman) or specialized to $Z_m^*$ (the integers mod $m$ under
+				multiplication).
+				</p>
+				The most fundamental facts about $Z_m^*$ are:
+				<ul>
+					<li>
+						$Z_m^*$ has $\varphi(m)$ elements, where $\varphi(m)$ is Euler's Phi function,
+						which counts the number of integers from $0$ to $m$ which don't have any factors in common with
+						$m$ (other than $1$).  This is a consequence of Bezout's identity, which tells us that for any $(x,y)$
+						there is a solution to $ax+by=\mathrm{gcd}(x,y)$.  If we set $y=m$, then Bezout tells us
+						that there is an inverse $a$ of any $x$ whose gcd with $m$ is $1$.
+					</li>
+					<li>
+						$Z_{ab}^*\cong Z_a^*\times Z_b^*$ when $\mathrm{gcd}(a,b)=1$.  This is a consequence
+						of the Chinese remainder theorem, and it means that we can treat the multiplicative
+						group mod a composite number as the Cartesian product of the multiplicative groups
+						mod $p^k$ for all primes $p$ dividing $m$, where $k$ is the maximal power for each
+						$p$.
+					</li>
+					<li>
+						$\varphi(ab)=\varphi(a)\varphi(b)$ when $\mathrm{gcd}(a,b)=1$.  This is a consequence of the
+						previous fact, although it would normally be proved first.  This reduces the problem
+						of finding $\varphi(m)$ to the problem of factoring, and finding $\varphi(p^k)$.
+						The second problem is easy, $\varphi(p^k) = p^k - #\{ap|a\in\{0,\ldots,p^{k-1}\}\} = p^k - p^{k-1} = (p-1)p^k$.
+						The first problem is hopefully hard unless you are the owner of a large quantum computer,
+						otherwise a lot of cryptography is in trouble.
+					</li>
+					<li>
+						$a^\lambda(m) = 1 \mod m$ when $\mathrm{gcd}(a,m)=1$.  $\lambda(m)$ is the Carmichael
+						function, and it is defined by $\lambda(ab)=\mathrm{lcm}(\lambda(a),\lambda(b))$ and
+						$\lambda(p^k)=\varphi(p^k)$ for prime powers, unless $p=2$ and $k>2$ in which case $\lambda(2^k)=\frac{1}{2}\varphi(2^k)=2^{k-2}$.
+						<p>
+						This solidifies the obvious fact that $a^n \mod m$ is periodic (it must be periodic because it only has finitely
+						many values and $a$ has an inverse) by telling us its period must divide $\lambda(m)$.
+						The minimal positive power of $a$ such that $a^n = 1 \mod m$ is called the "order" of $a$
+						($\mathrm{ord}(a)$).
+						</p>
+						<p>
+						Any $a$ with order $\lambda(m)$ is called a "generator" because
+						before its sequence of powers repeats, it generates all elements of $Z_m^*$.  For example,
+						consider $3 \mod 7$: $3^0=1$, $3^1=3$, $3^2=9=2$, $3^3=27=6$, $3^4=81=4$, and $3^5=243=5$.
+						$3^6=729=1$ as expected.
+						</p>
+					</li>
+					<li>
+						$m$ has $\varphi(\varphi(m))$ generators if $m=2$, $4$, $p^k$, or $2p^k$ where $p$ is an <em>odd</em>
+						prime.  Otherwise, $m$ does not have any generators.
+					</li>
+				</ul>
+				<p>
+				We are trying to investigate the equation $S_n=S_{n-j}\cdot S_{n-k}\mod m$.  When generators exist mod
+				$m$, if $g$ is a generator then we can rewrite this equation as $g^{\ell_n}=g^{\ell_{n-j}}g^{\ell_{n-k}}\mod m$,
+				or equivalently $\ell_n=\ell_{n-j}+\ell_{n-k}\mod \lambda(m)$.  So we successfully make LFMs linear!
+				With several caveats, sadly.
+				</p>
+			</div>
+			<h2>With Several Caveats: Baby Steps</h2>
+			<div class="tsect_body">
+				Firstly, it is not trivial to find $\ell_n$ such that $S_n=g^{\ell_n}\mod m$.  Moreover,
+				when $m$ is not an odd prime power, twice an odd prime power, or $2$ or $4$, we can't find any
+				generator at all.  And unfortunately, LFGs usually have $m=2^{64}$!  Let's explore how we solve
+				the discrete logarithm problem $h=g^x\mod p$ for $x$, and then investigate how we can extend this
+				to $m$ which are not prime.
+				<p>
+				Enter the Baby-step Giant-step algorithm.  This is a general purpose method for solving the discrete
+				log problem in any group, and it's one that's fairly rediscoverable.  Notice that we can rewrite
+				$h=g^x\mod p$ as $hg^{-x}=1\mod p$ because $g$ is invertable.  We could also write $x=a+b$ and
+				have $hg^{-a}=g^b\mod p$.  But we know $x$ is at most $\lambda(p)-1=p-2$.  So we can force $a$ to
+				be a multiple of $d=\lceil\sqrt{p-2}\rceil$, and create a list of values of $hg^{-a}\mod p$ and compute
+				values of $g^b\mod p$ until we find an overlap.  Since any value of $x$ can be broken into $kd+b$
+				where $k$ and $b$ are both at most $d$, this lets us find $x$ in $O(\sqrt{p})$ instead of $O(p)$.
+				Moreover, whenever $h$ is actually a power of $g$ mod $m$, this works for composite $m$ as well.
+				</p>
+				<p>
+				For example, consider trying to solve $2=3^x\mod 17$.  We know $\lambda(17)=16$, so $d=\sqrt{16}=4$.
+				$6\cdot 3=18=1\mod 17$ so $3^{-1}=6$, so $3^{-d}=6^4=4$.
+				We make lists of $2(6^d)^k\mod 17$ and $3^b\mod 17$:
+				</p>
+				<table class="data_table">
+					<tr>
+						<td>$k$</td><td>$0$</td><td>$1$</td><td>$2$</td><td>$3$</td>
+					</tr>
+					<tr>
+						<td>$2\cdot 4^k$</td><td>$2$</td><td>$8$</td><td>$15$</td><td>$9$</td>
+					</tr>
+					<tr>
+						<td>$b$</td><td>$0$</td><td>$1$</td><td>$2$</td><td>$3$</td>
+					</tr>
+					<tr>
+						<td>$3^b$</td><td>$1$</td><td>$3$</td><td>$9$</td><td>$10$</td>
+					</tr>
+				</table>
+				Here, we see the matching number in both lists is $9$: $2\cdot 4^3=9=3^2$, so $x=3\cdot 4+2=14$,
+				meaning $2=3^{14}\mod 17$.  <b>Note:</b> exponentiation with large exponents like $3^{14} \mod 17$
+				can be done quickly by breaking the exponent up into binary: $3^{14} = 3^{2^8+2^4+2^2}$.
+				Then we can repeatedly square the base: $3^{2^0}$, $3^{2^1}$, $3^{2^2}$, $\ldots$, and multiply
+				together the exponents corresponding to the bits set in the binary expansion of the desired exponent.
+			</div>
+			<h2>Stepping up the Ladder: Pohlig-Hellman for $\lambda(m)=p^k$</h2>
+			<div class="tsect_body">
+				<p>
+				Baby-step Giant-step is so called because the $g^b$ expression is taking "baby steps" and the
+				$h(g^{-d})^k$ expression is taking "giant steps" (within the exponent group $Z_{\lambda(m)}$).
+				It's much better than the naive algorithm of simply testing all possible exponents, but $O(\sqrt{m})$
+				is still quite slow.
+				</p>
+				<p>
+				Enter the Pohlig-Hellman algorithm.  This one is less simple, less general, and less easy to understand.
+				It's not impossible to rediscover, but it would require strong knowledge of group theory to do so.
+				<abbr title="Pohlig-Hellman">PH</abbr> depends on the factorization of the order of the group.
+				First, consider numbers $m$ for which generators exist and $\lambda(m)=p^k$ for some prime power
+				$p^k$.
+				</p>
+				<p>
+				We want to find $x\mod p^k$ such that $h=g^x\mod m$.  Obviously if we know $x$ mod $p^k$ then we know
+				it mod $p^{k-1}$, but is it possible to work the other way?  In fact it is, and that idea is
+				the crux of PH (and many other number theoretic algorithms).  If $x=r\mod p^{k-1}$, then
+				$x=ap^{k-1}+r\mod p^k$ for some $a\in\{0,\ldots,p-1\}$.  $g$ has order $p^k$, so $g^{p^{k-1}}$ has order
+				$p$.  We then apply this method of decreasing the order of an element to $h(g^{-1})^x=1\mod m$.
+				</p>
+				<p>
+				At first, we don't know anything about $x$, but we know $h(g^{-1})^{p^{k}}=1\mod m$.  This means
+				$\mathrm{ord}(h(g^{-1}))$ divides $p^k$, but that's true for every element of $Z_m^*$.  What's much
+				more interesting is that $\mathrm{ord}\left(h(g^{-1})^{p^{k-1}}\right)$ divides $p$.  Because $g$ is
+				a generator, there are $p-1$ choices of $x_1$ such that $\mathrm{ord}\left(h(g^{-x_1})^{p^{k-1}}\right)=p$,
+				but only one $x_1$ for which $\mathrm{ord}\left(h(g^{-x_1})^{p^{k-1}}\right)=1$.  By definition, $1$ is
+				the only element with order $1$.
+				</p>
+				<p>
+				This is already enough to solve $h=g^x\mod m$ for $x$ where $\lambda(m)=p^k$ in $O(kp)$ time.
+				We define a sequence $x_0$, $x_1$, $ldots$, $x_k$ where each $x_i = ap^{i-1}+x_{i-1}\mod p^i$ for some
+				$a\in\{0,\ldots,p-1\}$.  Each $x_i$ also satisfes $(h(g^{-x_i}))^{p^{k-i}}=1\mod m$,
+				which allows us to identify the correct $a$ at each step.  However, we can slap baby-step onto this
+				to make it $O(k\sqrt{p})$.
+				</p>
+				<p>
+				Instead of $x_i = ap^{i-1}+x_{i-1}\mod p^i$, write $x_i = (ad+b)p^{i-1}+x_{i-1}\mod p^i$ where
+				$d=\lceil\sqrt{p}\rceil$.  Then we have
+				$$\left(h\left(g^{-adp^{i-1}-bp^{i-1}-x_{i-1}}\right)\right)^{p^{k-i}}=1\mod m$$
+				$$\left(h\left(g^{-adp^{i-1}-x_{i-1}}\right)\right)^{p^{k-i}}\left(g^{-bp^{i-1}}\right)^{p^{k-i}}=1\mod m$$
+				$$\left(h\left(g^{-adp^{i-1}-x_{i-1}}\right)\right)^{p^{k-i}}=\left(g^{bp^{i-1}}\right)^{p^{k-i}}\mod m$$
+				$$\left(h\left(g^{-adp^{i-1}-x_{i-1}}\right)\right)^{p^{k-i}}=\left(g^{p^{k-1}}\right)^b\mod m$$
+				Just like with the baby-step giant-step algorithm, now we can create lists of values for both sides
+				for $a$ and $b$ in $\{0,\ldots,d-1\}$ and check for an overlap.  This takes $O(\sqrt{p})$ time,
+				leading to the $O(k\sqrt{p})$ time overall algorithm we were looking for.
+				</p>
+			</div>
+			<h2>One Foot on each Ladder: PH for $\lambda(m)$ with multiple prime divisors</h2>
+			<div class="tsect_body">
+				Oh fiddlesticks, most $m$ don't have $\lambda(m)=p^k$, what can we do?  Don't worry, this is
+				actually easier than lifing solutions up the $p^k$ ladder.  Suppose $\lambda(m)=ab$, where $a$
+				and $b$ are both prime powers, but of different primes.  This process works for any number of
+				prime powers, so we will only look at two for simplicity.  Remember that when we work with
+				powers of a generator $g^x\mod m$, the exponents live mod $\lambda(m)$.  But by supposition,
+				$\lambda(m)=ab$, so it would be nice if we could split the exponent group into one part with
+				size $a$ and one part with size $b$.
+				<p>
+				It turns out this is possible:  $g_a=g^\frac{\lambda(m)}{a}$ has order $a$.  In our simplified setting,
+				this is just $g^b$, but if $\lambda(m)$ had more prime power factors than just $a$ and $b$,
+				raising $g$ to the product of all prime power factors besides $a$ would get us our element
+				with order $a$.  Then for each prime power divisor $a=p^k$, we also define $h_a=h^\frac{\lambda(m)}{a}$
+				and then simply solve $h_a=g_a^{x_a}\mod m$ using the above algorithm (PH for $\lambda(m)=p^k$).
+				$x_a$ lives mod $a$, since raising $h$ and $g$ to $\frac{\lambda(m)}{a}$ decreases their maximal order
+				from $\lambda(m)$ to $a$, which is why that algorithm can be applied.
+				</p>
+				<p>
+				Then, once we have $x_a\mod a$ for each prime power divisor of $\lambda(m)$, we simply use
+				the Chinese remainder theorem to combine them into one $x\mod \lambda(m)$ which solves
+				$h=g^x\mod m$ as desired.
+				</p>
+			</div>
+			<h2>The Remaining Caveats: Factorization and some Groups without Generators</h2>
+			<div class="tsect_body">
+				If $\lambda(m)=p_1^{k_1}\cdot\cdots\cdot p_r^{k_r}$, PH can solve the discrete logarithm in $O((k_1\sqrt{p_1})\cdot\cdots\cdot(k_r\sqrt{p_r}))$
+				time, <em>but</em> it requires us to know $\lambda(m)$ (which can most easily be found by factoring $m$ as far as we know),
+				know the factorization of $\lambda(m)$, and know a generator mod $m$.
+				<p>
+				Factoring is very strongly believed to be a hard problem for anyone who doesn't have a
+				(by current measures) comically large quantum computer.  We can find factors quickly
+				for numbers which have sufficiently small factors, numbers which are very close
+				to a perfect square, some other special cases, and any number which is below about
+				100 digits.
+				</p>
+				<p>
+				When $Z_m^*$ has generators, it has $\varphi(\varphi(m))$ of them, so picking numbers mod
+				$m$ will get us a generator in constant expected time.
+				</p>
+				<p>
+				Finally, $Z_m^*$ only has generators if $m$ is $2$, and odd prime power, or twice one of those,
+				and more complicated groups also are not at all guaranteed to have generators.  To cap
+				things off, we'll look at how we can get around this for one of the most common groups in
+				cryptography: $Z_{2^k}^*$.
+				</p>
+			</div>
+			<h2>Discrete Logarithm mod Powers of 2</h2>
+			<div class="tsect_body">
+				<p>
+				If we consider multiplication of integers mod $2$, well, the only number between $0$ and $2$
+				that's coprime to $2$ is $1$, so $Z_2^*$ is just the trivial group.  If we kick it up
+				to $Z_4^*$, we get $\{1,3\}$, so $Z_4^*\cong Z_2$, just like $Z_m^*\cong Z_{\lambda(m)}^*$
+				whenever we have a generator mod $m$.
+				</p>
+				<p>
+				However, $Z_8^*$ is a curious case.  It consists of the numbers $\{1,3,5,7\}$ mod $8$,
+				and something very disturbing happens: $3^2=5^2=7^2=1$.  That is to say, all elements
+				of $Z_8^*$ have order $1$ or $2$, so there are <em>no</em> generators (which would have
+				order $4$ in this case).  Alas!  My beautiful Pohlig-Hellman algorithm is ruined for
+				any power of $2$ larger than $8$, because a generator in any of these groups would
+				imply a generator mod $8$ and we just saw there isn't one!
+				</p>
+				<p>
+				$Z_8^*$, instead of being equivalent to $Z_{\lambda(8)}$, is equivalent to a group
+				called the Klein 4 group, which is in turn equivalent to $Z_2\times Z_2$.  And for
+				powers of $2$ larger than $8$, we notice that we have a different way of
+				expressing this group: $\{1,2^{k-1}-1,2^{k-1}+1,-1\}$ under multiplication mod $2^k$.
+				We can easily check that each of the last three elements squares to $1$ and the
+				multiplication table for this group matches the multiplication table for $Z_8^*$.
+				</p>
+				<p>
+				Next, we note that $3$ has order $2^{k-2}$ in $Z_{2^k}^*$ (we can prove this from the
+				definition of the Carmichael function for $2^k$ and Euler's criterion, but quadratic
+				residues are beyond the scope of this discussion).  We know $Z_{2^k}^*$ has $\varphi(2^k)$
+				elements, and in fact any $r\mod 2^k$ can be written as $r=p^a q^b 3^x\mod 2^k$,
+				where $p=2^{k-1}-1$, $q=2^{k-1}+1$, $a$ and $b$ can both be $0$ or $1$, and $x$ lives
+				mod $2^{k-2}$.  We know this works because $p$ and $q$ have order $2$, $3$ has order
+				$2^{k-2}$, and $p$ and $q$ generate the embedding of $Z_8^*$.  So we know the
+				group generated by $p$, $q$, and $3$ has an order which is a multiple of $2^{k-2}$
+				and divides $2^{k-1}$ while being strictly larger than $2^{k-2}$, so it must be
+				$2^{k-1}$.
+				</p>
+				<p>
+				This means that to "solve" the discrete logarithm problem mod $2^k$, instead of
+				being able to just solve $h=g^x\mod 2^k$, we have to try solving $h=p^a q^b 3^x\mod 2^k$
+				for all four possible choices of $p^a q^b$ until one of them works.  A simple
+				modification once we know what to do, and possibly one that could be improved
+				via a similar strategy to PH, but it took a lot of preparation to understand the problem
+				well enough to reach this point.
+				</p>
+			</div>
+			<h2>Reverse-Engineering a LFM's Seed</h2>
+			<div class="tsect_body">
+				A long, long time ago, we had the equation $S_n=S_{n-j}\cdot S_{n-k}\mod m$ and we wanted
+				to linearize it.  Now, finally, we have the ability to do that.  We can rewrite our
+				equation as $p^{a_n}q^{b_n}3^{x_n}=p^{a_{n-j}}q^{b_{n-j}}3^{x_{n-j}}p^{a_{n-k}}q^{b_{n-k}}3^{x_{n-k}}\mod m$,
+				leading to three linear equations:
+				$$\begin{cases}a_n=a_{n-j}+a_{n-k}\mod 2 \\ b_n=b_{n-j}+b_{n-k}\mod 2 \\ x_n=x_{n-j}+x_{n-k}\mod 2^{k-2}\end{cases}.$$
+				<p>
+				And the final piece is being able to find all $a$, $b$, and $x$ needed to reconstruct
+				the last $k$ values of $S$ (the internal state of the LFM prng).  Fortunately, this is
+				exactly what the previous section "Discrete Logarithm mod Powers of 2" allows us to do!
+				</p>
+				<p>
+				Here is a small function that computes $a$, $b$, and $x$ given $h=S$.
+				</p>
+				<div class="highlight"><pre>
+<span class="k">const</span><span class="w"> </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">cr8r_prng_2tg_t64</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="mi">1ull</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">63</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="mi">1ull</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">63</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">-1</span><span class="p">};</span><span class="w"></span>
+<span class="c1">// raise b to the power of 2**i mod 2**j</span>
+<span class="kr">inline</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="kt">uint64_t</span><span class="w"> </span><span class="nf">pow_ti</span><span class="p">(</span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">i</span><span class="p">){</span><span class="w"></span>
+<span class="w">	</span><span class="k">while</span><span class="p">(</span><span class="n">i</span><span class="o">--</span><span class="p">){</span><span class="w"></span>
+<span class="w">		</span><span class="n">b</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="w">	</span><span class="p">}</span><span class="w"></span>
+<span class="w">	</span><span class="k">return</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="kt">uint64_t</span><span class="w"> </span><span class="nf">cr8r_prng_log_mod_t64</span><span class="p">(</span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">h</span><span class="p">){</span><span class="w"></span>
+<span class="w">	</span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pow_ti</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">61</span><span class="p">);</span><span class="w"></span>
+<span class="w">	</span><span class="c1">// the inverse of 3 mod 2**64</span>
+<span class="w">	</span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">g1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">12297829382473034411ull</span><span class="p">;</span><span class="w"></span>
+<span class="w">	</span><span class="k">for</span><span class="p">(</span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">gi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">gi</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">gi</span><span class="p">){</span><span class="w"></span>
+<span class="w">		</span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="w">		</span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">h</span><span class="o">*</span><span class="n">cr8r_prng_2tg_t64</span><span class="p">[</span><span class="n">gi</span><span class="p">];</span><span class="w"></span>
+<span class="w">		</span><span class="c1">// maintain g1_ti = g1**(2**i)</span>
+<span class="w">		</span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">g1_tk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">g1</span><span class="p">;</span><span class="w"></span>
+<span class="w">		</span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="w">		</span><span class="k">for</span><span class="p">(;</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">62</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">k</span><span class="p">){</span><span class="w"></span>
+<span class="w">			</span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">hk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pow_ti</span><span class="p">(</span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="mi">61</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">k</span><span class="p">);</span><span class="w"></span>
+<span class="w">			</span><span class="k">if</span><span class="p">(</span><span class="n">hk</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="p">){</span><span class="w"></span>
+<span class="w">				</span><span class="c1">// x is not modified</span>
+<span class="w">			</span><span class="p">}</span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="p">(</span><span class="n">hk</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">y</span><span class="p">){</span><span class="w"></span>
+<span class="w">				</span><span class="n">x</span><span class="w"> </span><span class="o">|=</span><span class="w"> </span><span class="mi">1ull</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">k</span><span class="p">;</span><span class="w"></span>
+<span class="w">				</span><span class="n">b</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="n">g1_tk</span><span class="p">;</span><span class="w"></span>
+<span class="w">			</span><span class="p">}</span><span class="k">else</span><span class="p">{</span><span class="w"></span>
+<span class="w">				</span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="w">			</span><span class="p">}</span><span class="w"></span>
+<span class="w">			</span><span class="n">g1_tk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">g1_tk</span><span class="o">*</span><span class="n">g1_tk</span><span class="p">;</span><span class="w"></span>
+<span class="w">		</span><span class="p">}</span><span class="w"></span>
+<span class="w">		</span><span class="k">if</span><span class="p">(</span><span class="n">k</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">62</span><span class="p">){</span><span class="w"></span>
+<span class="w">			</span><span class="c1">// x was successfully extended to 62 bits, set the high 2 bits</span>
+<span class="w">			</span><span class="c1">// to the powers (0 or 1) of the order-2 generators 2**63+1 for</span>
+<span class="w">			</span><span class="c1">// the highest bit, and 2**63-1 for the second highest bit.</span>
+<span class="w">			</span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="n">gi</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">62</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="p">(</span><span class="n">x</span><span class="o">&amp;</span><span class="p">((</span><span class="mi">1ull</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">62</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">));</span><span class="w"></span>
+<span class="w">		</span><span class="p">}</span><span class="w"></span>
+<span class="w">	</span><span class="p">}</span><span class="w"></span>
+<span class="w">	</span><span class="c1">// reachable iff h is even</span>
+<span class="w">	</span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+			</div>
+		</div>
+		<h2>Finishing Thoughts</h2>
+		<div class="tsect_body">
+			We just saw how all commonly used non cryptography-based prngs can have their internal
+			state reverse engineered from their outputs using linear algebra.  The exception was Lagged
+			Fibonacci Generators using multiplication.  We saw how these too could be linearized,
+			but the method to do so required the modulus $m$ to be easily factorable with $\lambda(m)$
+			factorable and $m$ a prime power or twice a prime power.
+			<p>
+			Because of this, we could make a LFM that could not be reverse engineered, at least not
+			via these methods, by choosing $m$ more carefully so that $m$ is still a prime power
+			or twice a prime power but $\lambda(m)$ is a large prime or the product of two large primes
+			not too close to each other.
+			</p>
+			<p>
+			These classes of prngs are intended for speed and not security though, so when they are used
+			properly, being able to invert them like this is not harmful.  If security is important,
+			a cryptographic prng should be used instead.
+			</p>
+		</div>
+	</div>
+</body>
+</html>
+

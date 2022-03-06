@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<head>
+	<title>Gabriel Eiseman - Beacon Scanner</title>
+	<link rel="stylesheet" type="text/css" href="../main.css" media="screen"/>
+	<link rel="stylesheet" type="text/css" href="../pygments_xcode.css" media="screen"/>
+	<link rel="icon" type="image/x-icon" href="../hacatu.png"/>
+	<script type="text/javascript" src="../main.js"></script>
+</head>
+<body>
+	<div id="float_hdr">
+		<table>
+			<colgroup>
+				<col span="1" style="width: 25%;">
+				<col span="1" style="width: 25%;">
+				<col span="1" style="width: 25%;">
+				<col span="1" style="width: 25%;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="cur_subpage_link">Gabriel</td>
+					<td class="subpage_link"><a href="../index.html">About</a></td>
+					<td class="subpage_link"><a href="../contact.html">Contact</a></td>
+					<td class="subpage_link"><a href="../projects.html">Projects</a></td>
+				</tr>
+				<tr>
+					<td colspan=3></td>
+					<td class="subpage_link"><a href="../problem_spotlights.html">Problem Spotlights</a></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	<div id="hidden_hdr"></div>
+	<div class="subpage" id="projects_page">
+		<div class="tsect">
+			<h1>Problem Spotlight: Beacon Scanner (Advent of Code 2021 #19)</h1>
+			<h2>Introduction</h2>
+			<div class="tsect_body">
+				<a href="https://adventofcode.com/">Advent of Code</a> is an annual compilation of very easy programming challenges.
+				It's designed to promote interest in coding and the problems are supposed to
+				be solved every day.
+				<p>
+				To make things more interesting, I decided to solve the problems on my phone
+				(within termux).  While most were very easy, there are a few that were interesting.
+				</p>
+				<p>
+				<a href="https://adventofcode.com/2021/day/24">Problem 24</a> focused on static analysis.  This problem was best solved by inspection:
+				it asked to find the smallest and largest number accepted by a program in a
+				fictitious assembly language.  The program was formulaic and made of many very
+				similar blocks, and the blocks involved division and multiplication, which combined
+				to make analyzing it by hand the best approach.
+				</p>
+				<p>
+				<a href="https://adventofcode.com/2021/day/19">Problem 19</a> was the most complicated and fun to work through.
+				It presented us with a list of "scanners", and for each a list of "beacons"
+				or "points" it sees.  Each scanner sees all points within a 2000 by 2000 by 2000
+				cube centered on itself.  However, the area over which the points seen by all
+				scanners are spread is not known.  The location and orientation of each scanner
+				is also unknown, but the orientation of each scanner is fixed to be orthogonal.
+				</p>
+				<p>
+				The task is to discover the position of each scanner and point in global coordinates.
+				For convenience, we can use the local coordinates of the first scanner as global coordinates.
+				</p>
+				<p>
+				The problem specifies that overlapping scanners must see at least 12 of the same points.
+				However, finding the overlapping scanners directly would be very difficult and inefficient.
+				Projecting all of the points onto one axis, finding all possible overlaps, then extending to
+				two then three axes or repeating this for all axes and combining the results might work.
+				But these would be complicated and probably slow, so I immediatly made an insight that I thought
+				would be very helpful in solving the problem.
+				</p>
+			</div>
+			<h2>Analysis: Identifying Potential Overlaps</h2>
+			<div class="tsect_body">
+				If we consider the distance between points, this is invariant under rotations.  Therefore if we
+				can find some distance that only occurs in two scanners, this corresponds to a possible overlap
+				between those two scanners.
+				<p>
+				If we create a table for each scanner mapping distances to sets of pairs of points which are that distance
+				apart.  Then we can create a second table mapping distances to sets of scanners which contain
+				points that distance apart.  This allows us to find the distances which occur in exactly two scanners,
+				and note down these two scanners as potentially overlapping.
+				</p>
+				<p>
+				The naive approach is cubic in the number of points in the range of each scanner, but binning pairs by
+				distance first allows us to do it in closer to quadratic time.  Both methods can probably be pushed to
+				somewhere in the middle, depending on how pathological or well behaved the points are.  For binning pairs,
+				there's quadratically many pairs and for each one we either do a constant amount of work (if using a hashtable)
+				or logarithmic amount of work (if using a tree).  But then we have to do a variable amount of work for every
+				pair of scanners that shares a distance, which is based on how many distances actually occur in the data set.
+				It's actually more difficult to reason about the naive approach, because finding matching pairs and larger
+				"constellations" of points is so fundamental.  There are quadratically many offsets between any two scanners
+				which will produce an overlap containing a fixed number of points from each, since once the first two coordinate
+				offsets are chosen, the third is forced.  Each offset will be very unlikely to correspond to a valid overlap,
+				and while this is also true for each pair in the binning approach, most bins can be discarded immediately
+				or with little work but this is much less true for offsets.
+				</p>
+				<p>
+				What's really cool about "constellations" of more than two points is that enumerating all of them could conceivably
+				only take quadratic time.  This and efficiently implementing the naive approach would both require more complicated
+				data structures: kd trees in both cases and something more for large constellations.  Organizing the points
+				into a kd tree lets us iterate over all points and all radii.  Go down to the "furthur investigation possibility"
+				section for a slightly more in depth discussion of larger constellations.
+				</p>
+				<p>
+				The previously discussed table gives us a graph of potential connections that we can run a breadth first search on to lock in the
+				position and orientation of each scanner.  For each potential connection, we consider each pair of points
+				in each of the two scanners that has the common distance.  One scanner will have a known position and
+				orientation and the other won't (because we start by using the frame of reference of the first scanner
+				as global coordinates and then always consider potential connections from scanners with known frames of
+				reference to ones with unknown).
+				</p>
+				<p>
+				The following code implements building the table mapping distances to pairs of points.  We don't just
+				bin the pairs by distance though, we bin them by a "distance profile".  Distance is just the square root
+				of the sum of the squared distance over all coordinates.  However, it's common to use squared distance
+				instead of distance because it skips computation, preserves order, and keeps us within the integers.
+				We can also use other <a href="https://en.wikipedia.org/wiki/Lp_space#The_p-norm_in_finite_dimensions">p norms</a>,
+				which, while not invariant under general rotations, are symmetric functions (under coordinate permutation
+				and negation), making them invariant under the orthogonal rotations we care about.
+				</p>
+				<p>
+				We can simplify how we define the "distance profile".  Instead of considering, say, the 1, 2, and 3 norms,
+				we can just consider the minimum, median, and maximum coordinatewise displacements.  Both of these triples
+				can be converted uniquely back and forth.
+				</p>
+				<div class="highlight"><pre>
+<span class="k">class</span> <span class="nc">Scanner</span><span class="p">:</span>
+	<span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">rotation</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">is_transformed</span> <span class="o">=</span> <span class="kc">False</span>
+
+	<span class="k">def</span> <span class="nf">add_point</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+	
+	<span class="k">def</span> <span class="nf">compute_dists</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">dist_pairs</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+		<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">itt</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="p">)),</span> <span class="mi">2</span><span class="p">):</span>
+			<span class="n">dist_profile</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">([</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]))</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">dist_pairs</span><span class="p">[</span><span class="n">dist_profile</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">))</span>
+				</pre></div>
+			</div>
+			<h2>Analysis: Rotations</h2>
+			<div class="tsect_body">
+				We could find all rotations that line up the displacements, but it is easier to just test all 24
+				rotations.  Finding all these rotations is a little interesting in and of itself.  A rotation can be
+				represented by an orthonormal matrix with determinant 1.  These characteristics ensure that the
+				transformation of the matrix is conformal (preserves angles), isometric (preserves distances), and
+				not a reflection (as it would be if the determinant were -1 instead).  This lets us write the last
+				column of the matrix as the cross product of the first two.
+				<p>
+				From another point of view, because the rotations are constrained to be orthonormal, we know the matrix
+				sends each standard basis vector to a standard basis vector or its negation.
+				</p>
+				<p>
+				The below snippet generates a list of all 24 orthonormal rotation matrices by looping over all pairs
+				of standard basis vectors "ei" and "ej".  For each pair, the cross product "ek" is found.  This would
+				produce only the 6 rotations where the first two standard basis vectors are mapped to standard basis
+				vectors, so we also include these rotations with two coordinates negated to get all rotations.
+				</p>
+				<div class="highlight"><pre>
+<span class="n">rotations</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+	<span class="n">ei</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">l</span> <span class="o">==</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+	<span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+		<span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="n">i</span><span class="p">:</span>
+			<span class="k">continue</span>
+		<span class="n">ej</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">l</span> <span class="o">==</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+		<span class="n">ek</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span>
+		<span class="n">ek</span><span class="p">[</span><span class="mi">3</span> <span class="o">-</span> <span class="n">i</span> <span class="o">-</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">%</span><span class="mi">3</span> <span class="o">==</span> <span class="n">j</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span>
+		<span class="n">rotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">((</span><span class="n">ei</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="n">ej</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="n">ek</span><span class="p">[</span><span class="n">l</span><span class="p">])</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)))</span>
+		<span class="n">rotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">((</span><span class="o">-</span><span class="n">ei</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="o">-</span><span class="n">ej</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="n">ek</span><span class="p">[</span><span class="n">l</span><span class="p">])</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)))</span>
+		<span class="n">rotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">((</span><span class="o">-</span><span class="n">ei</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="n">ej</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="o">-</span><span class="n">ek</span><span class="p">[</span><span class="n">l</span><span class="p">])</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)))</span>
+		<span class="n">rotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">((</span><span class="n">ei</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="o">-</span><span class="n">ej</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="o">-</span><span class="n">ek</span><span class="p">[</span><span class="n">l</span><span class="p">])</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)))</span>
+
+<span class="k">def</span> <span class="nf">rotate</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">rot</span><span class="p">):</span>
+	<span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">a</span><span class="o">*</span><span class="n">b</span> <span class="k">for</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">point</span><span class="p">))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rot</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">have_same_octant</span><span class="p">(</span><span class="n">ai</span><span class="p">,</span> <span class="n">bi</span><span class="p">,</span> <span class="n">aj</span><span class="p">,</span> <span class="n">bj</span><span class="p">):</span>
+	<span class="k">return</span> <span class="nb">all</span><span class="p">((</span><span class="n">bi</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">ai</span><span class="p">[</span><span class="n">k</span><span class="p">])</span><span class="o">*</span><span class="p">(</span><span class="n">bj</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">aj</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+				</pre></div>
+			</div>
+			<h2>Finalizing an Algorithm</h2>
+			<div class="tsect_body">
+				Once we have a pair of points in a known scanner with a distance matching a pair of points in an unknown
+				scanner in hand and have found a rotation that lines them up, all we need to do is find the displacement
+				between the scanners, compute the location of the second scanner's points in global coordinates, and finally
+				verify that the overlap of their detection volumes contains at least 12 matching points.
+				<p>
+				This code is a first draft, with some compromises to performance that are discussed later.
+				</p>
+				<div class="highlight"><pre>
+<span class="n">dist_scanners</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+
+<span class="c1"># For each scanner, bin pairs of points according to distance profile</span>
+<span class="c1"># (not just the (L2) distance, but the L1 and L3 distances as well)</span>
+<span class="c1"># (in fact the distance profile is just stored as a sorted list of coordinatewise distances)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">scanner</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">scanners</span><span class="p">):</span>
+	<span class="n">scanner</span><span class="o">.</span><span class="n">compute_dists</span><span class="p">()</span>
+	<span class="k">for</span> <span class="n">dist_profile</span> <span class="ow">in</span> <span class="n">scanner</span><span class="o">.</span><span class="n">dist_pairs</span><span class="p">:</span>
+		<span class="n">dist_scanners</span><span class="p">[</span><span class="n">dist_profile</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+<span class="n">potential_neighbors</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">))</span>
+<span class="n">num_potential_overlaps</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="k">for</span> <span class="n">dist_profile</span><span class="p">,</span> <span class="n">ids</span> <span class="ow">in</span> <span class="n">dist_scanners</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+		<span class="n">potential_neighbors</span><span class="p">[</span><span class="n">ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="n">ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dist_profile</span><span class="p">)</span>
+		<span class="n">potential_neighbors</span><span class="p">[</span><span class="n">ids</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="n">ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dist_profile</span><span class="p">)</span>
+		<span class="n">num_potential_overlaps</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="n">num_untransformed</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">scanners</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="n">scanners</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">is_transformed</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">frontier</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">}</span>
+
+<span class="k">while</span> <span class="n">frontier</span> <span class="ow">and</span> <span class="n">num_untransformed</span><span class="p">:</span>
+	<span class="n">i</span> <span class="o">=</span> <span class="n">frontier</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+	<span class="n">pos_i</span> <span class="o">=</span> <span class="n">scanners</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">pos</span>
+	<span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">dist_profiles</span> <span class="ow">in</span> <span class="n">potential_neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+		<span class="k">del</span> <span class="n">potential_neighbors</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+		<span class="k">if</span> <span class="n">scanners</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">is_transformed</span><span class="p">:</span>
+			<span class="k">continue</span>
+		<span class="c1"># scanners[i] has points in global coordinates, so try all rotations of scanners[j]</span>
+		<span class="k">for</span> <span class="n">dist_profile</span> <span class="ow">in</span> <span class="n">dist_profiles</span><span class="p">:</span>
+			<span class="k">for</span> <span class="n">ai</span><span class="p">,</span> <span class="n">bi</span> <span class="ow">in</span> <span class="n">scanners</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">dist_pairs</span><span class="p">[</span><span class="n">dist_profile</span><span class="p">]:</span>
+				<span class="n">ai</span> <span class="o">=</span> <span class="n">scanners</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">ai</span><span class="p">]</span>
+				<span class="n">bi</span> <span class="o">=</span> <span class="n">scanners</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">bi</span><span class="p">]</span>
+				<span class="k">for</span> <span class="n">rot</span> <span class="ow">in</span> <span class="n">rotations</span><span class="p">:</span>
+					<span class="k">for</span> <span class="n">aj</span><span class="p">,</span> <span class="n">bj</span> <span class="ow">in</span> <span class="n">scanners</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">dist_pairs</span><span class="p">[</span><span class="n">dist_profile</span><span class="p">]:</span>
+						<span class="n">aj</span> <span class="o">=</span> <span class="n">rotate</span><span class="p">(</span><span class="n">scanners</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">aj</span><span class="p">],</span> <span class="n">rot</span><span class="p">)</span>
+						<span class="n">bj</span> <span class="o">=</span> <span class="n">rotate</span><span class="p">(</span><span class="n">scanners</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">bj</span><span class="p">],</span> <span class="n">rot</span><span class="p">)</span>
+						<span class="c1"># first we confirm that this rotation makes the coordinatewise distances line up</span>
+						<span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">bj</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">aj</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="o">!=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">bi</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">ai</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)):</span>
+							<span class="k">continue</span>
+						<span class="c1"># next we need to confirm the pair of points seen by j is actually a rotation of those seen by i</span>
+						<span class="c1"># note that this is complicated by the existence of 0 coordinates</span>
+						<span class="k">if</span> <span class="ow">not</span> <span class="n">have_same_octant</span><span class="p">(</span><span class="n">ai</span><span class="p">,</span> <span class="n">bi</span><span class="p">,</span> <span class="n">aj</span><span class="p">,</span> <span class="n">bj</span><span class="p">):</span>
+							<span class="n">aj</span><span class="p">,</span> <span class="n">bj</span> <span class="o">=</span> <span class="n">bj</span><span class="p">,</span> <span class="n">aj</span>
+							<span class="k">if</span> <span class="ow">not</span> <span class="n">have_same_octant</span><span class="p">(</span><span class="n">ai</span><span class="p">,</span> <span class="n">bi</span><span class="p">,</span> <span class="n">aj</span><span class="p">,</span> <span class="n">bj</span><span class="p">):</span>
+								<span class="k">continue</span>
+						<span class="n">displacement</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">ai</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">aj</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+						<span class="n">pos_j</span> <span class="o">=</span> <span class="n">displacement</span>
+						<span class="n">points1</span> <span class="o">=</span> <span class="p">[</span><span class="n">rotate</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">rot</span><span class="p">)</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">scanners</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">points</span><span class="p">]</span>
+						<span class="n">points1</span> <span class="o">=</span> <span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+</span> <span class="n">displacement</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">points1</span><span class="p">]</span>
+						<span class="c1"># now we need to check that the set of points in the overlap is consistent</span>
+						<span class="n">bl</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">pos_i</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">pos_j</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1000</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+						<span class="n">tr</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">pos_i</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">pos_j</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1000</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+						<span class="n">overlap_a</span> <span class="o">=</span> <span class="p">{</span><span class="n">point</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">scanners</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">points</span> <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">bl</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">tr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))}</span>
+						<span class="n">overlap_b</span> <span class="o">=</span> <span class="p">{</span><span class="n">point</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">points1</span> <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">bl</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">tr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))}</span>
+						<span class="k">if</span> <span class="n">overlap_a</span> <span class="o">!=</span> <span class="n">overlap_b</span><span class="p">:</span>
+							<span class="k">continue</span>
+						<span class="c1"># the rules state there must be at least 12 points overlapping</span>
+						<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">overlap_a</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">12</span><span class="p">:</span>
+							<span class="k">continue</span>
+						<span class="c1"># finally we have an overlap !</span>
+						<span class="n">scanners</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">points</span> <span class="o">=</span> <span class="n">points1</span>
+						<span class="n">scanners</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">pos_j</span>
+						<span class="n">scanners</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">is_transformed</span> <span class="o">=</span> <span class="kc">True</span>
+						<span class="n">frontier</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+						<span class="n">num_untransformed</span> <span class="o">-=</span> <span class="mi">1</span>
+			<span class="k">break</span>
+	<span class="k">del</span> <span class="n">potential_neighbors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+<span class="n">points</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">scanner</span> <span class="ow">in</span> <span class="n">scanners</span><span class="p">:</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">scanner</span><span class="o">.</span><span class="n">is_transformed</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Not all scanners ranges could be combined!&quot;</span><span class="p">)</span>
+	<span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">scanner</span><span class="o">.</span><span class="n">points</span><span class="p">:</span>
+		<span class="n">points</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+				</pre></div>
+			</div>
+			<h2>Further Investigation Possibilities</h2>
+			<div class="tsect_body">
+				This problem has a lot of interesting generalizations and real world applications.
+				For example, it's similar to finding the position of objects seen by multiple cameras,
+				multiple radar detectors, or so on.  Most real world applications would have more
+				a priori information about the position of the scanners (making the problem simpler).
+				<p>
+				On the other hand, real world applications would have general (non-orthogonal) rotations,
+				possibly moving detectors, and almost surely scanner error.  General rotations and scanner
+				error can be dealt with by using only distance squared as the "distance profile", and by using
+				a binary search tree to store the table of points with a given distance rather than
+				a hash table.  This would enable finding corresponding pairs of points that have slightly
+				unequal distances due to scanner error.
+				</p>
+				<p>
+				The algorithm for stitching the detection data from multiple scanners together could be
+				improved in a couple ways.  Instead of finding the appropriate rotation to try by cycling
+				through all 24 possible orthogonal rotations, we could do some vector algebra to compute
+				two one-dimensional families of rotations which send the unknown pair of points onto the
+				known pair of points.  In particular, these families consist of one which flips the points,
+				sending the first in the unknown pair to the second in the known pair and visa versa,
+				and one which doesn't, with both families being parameterized by how far they rotate
+				around the line through the pair of points.
+				</p>
+				<p>
+				Another potential improvement would be parallel stitching of different overlapping scanners.
+				Instead of building up the stitched region using breadth first search starting at the
+				first scanner, overlapping scanners could be stitched together in multiple connected components
+				at once, eventually being combined into one unified region.  This would require storing a
+				transformation matrix for each scanner's local reference frame relative to the reference frame
+				of the first scanner it its connected component, since the relative orientation of connected
+				components would not be known beforehand.  This would also eliminate the need to actually
+				transform each scanner's list of points.
+				</p>
+				<p>
+				Finally, considering constellations larger than two points could improve performance by increasing
+				how well we can identify potential overlaps.  Building a kd tree lets us find all constellations
+				in quadratic time, but storing them becomes extremely complicated.  The mapping from center, radius
+				pairs to constellations contained within is simple enough, the challenge is in storing constellations
+				and especially indexing constellations by shape.
+				</p>
+				<p>
+				Storing the largest constellation within concentric
+				spheres is simple enough, by splitting up points into concentric shells and introducing graph edges
+				between points in adjacent shells.  However, we absolutely do not have concentric spheres, and
+				efficiently storing constellations in general probably requires constructing a
+				<a href="https://en.wikipedia.org/wiki/Delaunay_triangulation">Delaunay triangulation</a>
+				on the points.  Then developing a data structure indexed by constellations is a whole other monster.
+				Not just the Delaunay graph and associated distances matter, but, obviously, the exact relative angles
+				of the edges as well.
+				</p>
+				<p>
+				The most practical way to build an algorithm given a Delaunay graph for each scanner's points
+				is probably to start with matching single segments as done in the code above, but then extend
+				each match using Delaunay edges until a maximal matching subgraph is found, and only then lock
+				in the rotation and ensure no extra points exist in either scanner (again using the Delaunay graph).
+				</p>
+			</div>
+		</div>
+	</div>
+</body>
+
