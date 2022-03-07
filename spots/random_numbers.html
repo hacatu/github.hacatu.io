@@ -5,7 +5,7 @@
 	<title>Gabriel Eiseman - Random Numbers</title>
 	<link rel="stylesheet" type="text/css" href="../main.css" media="screen"/>
 	<link rel="stylesheet" type="text/css" href="../pygments_xcode.css" media="screen"/>
-	<link rel="icon" type="image/x-icon" href="../hacatu.png"/>
+	<link rel="icon" type="image/x-icon" href="../hacatu_logo_mini.gif"/>
 	<script type="text/javascript">
 		MathJax = {
 		  tex: {inlineMath: [['$', '$'], ['\\(', '\\)']]}
@@ -257,7 +257,7 @@
 						otherwise a lot of cryptography is in trouble.
 					</li>
 					<li>
-						$a^\lambda(m) = 1 \mod m$ when $\mathrm{gcd}(a,m)=1$.  $\lambda(m)$ is the Carmichael
+						$a^{\lambda(m)} = 1 \mod m$ when $\mathrm{gcd}(a,m)=1$.  $\lambda(m)$ is the Carmichael
 						function, and it is defined by $\lambda(ab)=\mathrm{lcm}(\lambda(a),\lambda(b))$ and
 						$\lambda(p^k)=\varphi(p^k)$ for prime powers, unless $p=2$ and $k>2$ in which case $\lambda(2^k)=\frac{1}{2}\varphi(2^k)=2^{k-2}$.
 						<p>
@@ -329,12 +329,10 @@
 			</div>
 			<h2>Stepping up the Ladder: Pohlig-Hellman for $\lambda(m)=p^k$</h2>
 			<div class="tsect_body">
-				<p>
 				Baby-step Giant-step is so called because the $g^b$ expression is taking "baby steps" and the
 				$h(g^{-d})^k$ expression is taking "giant steps" (within the exponent group $Z_{\lambda(m)}$).
 				It's much better than the naive algorithm of simply testing all possible exponents, but $O(\sqrt{m})$
 				is still quite slow.
-				</p>
 				<p>
 				Enter the Pohlig-Hellman algorithm.  This one is less simple, less general, and less easy to understand.
 				It's not impossible to rediscover, but it would require strong knowledge of group theory to do so.
@@ -359,7 +357,7 @@
 				</p>
 				<p>
 				This is already enough to solve $h=g^x\mod m$ for $x$ where $\lambda(m)=p^k$ in $O(kp)$ time.
-				We define a sequence $x_0$, $x_1$, $ldots$, $x_k$ where each $x_i = ap^{i-1}+x_{i-1}\mod p^i$ for some
+				We define a sequence $x_0$, $x_1$, $\ldots$, $x_k$ where each $x_i = ap^{i-1}+x_{i-1}\mod p^i$ for some
 				$a\in\{0,\ldots,p-1\}$.  Each $x_i$ also satisfes $(h(g^{-x_i}))^{p^{k-i}}=1\mod m$,
 				which allows us to identify the correct $a$ at each step.  However, we can slap baby-step onto this
 				to make it $O(k\sqrt{p})$.
@@ -425,12 +423,10 @@
 			</div>
 			<h2>Discrete Logarithm mod Powers of 2</h2>
 			<div class="tsect_body">
-				<p>
 				If we consider multiplication of integers mod $2$, well, the only number between $0$ and $2$
 				that's coprime to $2$ is $1$, so $Z_2^*$ is just the trivial group.  If we kick it up
 				to $Z_4^*$, we get $\{1,3\}$, so $Z_4^*\cong Z_2$, just like $Z_m^*\cong Z_{\lambda(m)}^*$
 				whenever we have a generator mod $m$.
-				</p>
 				<p>
 				However, $Z_8^*$ is a curious case.  It consists of the numbers $\{1,3,5,7\}$ mod $8$,
 				and something very disturbing happens: $3^2=5^2=7^2=1$.  That is to say, all elements
